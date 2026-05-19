@@ -1,0 +1,29 @@
+Label	Name and strain                                        	Protein input per biological replicate (mug)	Protein abundance %	Cell number input per biological replicate	Cell abundance %		
+PD	Pseudomonas denitrificans ATCC 13867	642.7	4.259	5.83E+08	0.600		
+BS	Bacillus subtilis 168	642.7	4.259	4.48E+08	0.462		
+PaD	"Paracoccus denitrificans ATCC 17741, (Beijerinck and Minkman) Davis emend. Rainey et al. "	642.7	4.259	1.62E+09	1.666		
+199	Roseobacter sp. AK199	642.7	4.259	7.87E+08	0.811		
+KF7	Pseudomonas pseudoalcaligenes KF707	642.7	4.259	4.49E+08	0.462		
+CV	Chromobacterium violaceum CV026	642.7	4.259	4.33E+08	0.446		
+ATN	Agrobacterium tumefaciens NTL4	642.7	4.259	8.89E+08	0.916		
+SMS	Stenotrophomonas maltophilia SeITE02	642.7	4.259	7.17E+08	0.738		
+Cup	Cupriavidus metalliredcens  CH34; (DSM 2839; LMG 1195; CIP 107179)	642.7	4.259	1.49E+09	1.531		
+Pfl	"Pseudomonas fluorescens ATCC 13525, Type strain"	642.7	4.259	4.35E+08	0.448		
+BXL	Burkholderia xenovorans LB400	642.7	4.259	4.60E+09	4.738		
+137	"Staphylococcus aureus subsp. aureus Rosenbach, Smith [NCTC 10399], ATCC 13709"	642.7	4.259	1.07E+10	11.017		
+259	"Staphylococcus aureus subsp. aureus Rosenbach, Seattle 1945, ATCC 25923"	642.7	4.259	1.34E+10	13.771		
+Am2	Alteromonas macleodii ATCC 27126	642.7	4.259	1.50E+09	1.544		
+97 or 2197	"Salmonella enterica typhimurium LT2 with Flac+ Plasmid, SA2197"	642.7	4.259	7.16E+08	0.738		
+91 or 2191 	Escherichia coli K12 with Flac+ Plasmid	642.7	4.259	1.01E+09	1.037		
+LT2	Salmonella enterica typhimurium LT2	642.7	4.259	9.63E+08	0.992		
+H88	"Salmonella enterica typhimurium LT2-H88, Rough mutant of LT2"	642.7	4.259	7.37E+08	0.760		
+HB2	Thermus Thermophilus HB27	642.7	4.259	8.31E+08	0.856		
+CRH	Chlamydomonas reinhardtii	642.7	4.259	4.88E+07	0.050		
+M13	Phage M13	62	0.411	2.84E+08	0.293		
+F2	Phage F2	62	0.411	5.00E+08	0.515		
+P22	Phage P22 (HT105)	62	0.411	3.35E+10	34.459		
+F0	Phage F0	62	0.411	5.56E+09	5.723		
+ES18	Phage ES18 (H1)	62	0.411	6.86E+08	0.706		
+841	Rhizobium leguminosarum bv. viciae 3841	642.7	4.259	9.21E+08	0.949		
+VF	Rhizobium leguminosarum bv. viciae VF39	642.7	4.259	1.73E+09	1.783		
+Nv	Nitrososphaera viennensis	642.7	4.259	1.16E+10	11.990		

@@ -1,0 +1,33 @@
+Label	Name and strain                                        	Protein input per biological replicate (mug)	Protein abundance %	Cell number input per biological replicate	Cell abundance %
+PD	Pseudomonas denitrificans ATCC 13867	2128.51	2.871	1930000000	0.965
+BS	Bacillus subtilis 168	583.83	0.788	407100000	0.204
+PaD	"Paracoccus denitrificans ATCC 17741, (Beijerinck and Minkman) Davis emend. Rainey et al. "	683.66	0.922	1720000000	0.860
+199	Roseobacter sp. AK199	1183.43	1.596	1450000000	0.725
+KF7	Pseudomonas pseudoalcaligenes KF707	863.80	1.165	603000000	0.302
+CV	Chromobacterium violaceum CV026	933.08	1.259	629000000	0.315
+ATN	Agrobacterium tumefaciens NTL4	4186.28	5.647	5790000000	2.895
+SMS	Stenotrophomonas maltophilia SeITE02	5946.27	8.021	6630000000	3.315
+Cup	Cupriavidus metallireducens  CH34; (DSM 2839; LMG 1195; CIP 107179)	11504.98	15.519	26600000000	13.300
+Pfl	"Pseudomonas fluorescens ATCC 13525, Type strain"	4964.22	6.696	3360000000	1.680
+BXL	Burkholderia xenovorans LB400	321.37	0.433	2300000000	1.150
+DVH	Desulfovibrio vulgaris Hildenborough	701.58	0.946	930000000	0.465
+137	"Staphylococcus aureus subsp. aureus Rosenbach, Smith [NCTC 10399], ATCC 13709"	715.15	0.965	11900000000	5.950
+259	"Staphylococcus aureus subsp. aureus Rosenbach, Seattle 1945, ATCC 25923"	1216.31	1.641	25300000000	12.650
+Am2	Alteromonas macleodii ATCC 27126	707.47	0.954	1650000000	0.825
+97 or 2197	"Salmonella enterica typhimurium LT2 with Flac+ Plasmid, SA2197"	4612.53	6.222	5140000000	2.570
+91 or 2191 	Escherichia coli K12 with Flac+ Plasmid	4290.54	5.788	6720000000	3.360
+LT2	Salmonella enterica typhimurium LT2	13887.47	18.733	20800000000	10.400
+H88	"Salmonella enterica typhimurium LT2-H88, Rough mutant of LT2"	6537.78	8.819	7500000000	3.750
+HB2	Thermus Thermophilus HB27	1245.63	1.680	1610000000	0.805
+CRH	Chlamydomonas reinhardtii	2962.73	3.996	225000000	0.113
+M13	Phage M13	109.02	0.147	500000000	0.250
+F2	Phage F2	62.04	0.084	500000000	0.250
+P22	Phage P22 (HT105)	78.77	0.106	42500000000	21.250
+F0	Phage F0	65.28	0.088	5850000000	2.925
+ES18	Phage ES18 (H1)	65.55	0.088	725000000	0.363
+841	Rhizobium leguminosarum bv. viciae 3841	680.47	0.918	975000000	0.488
+VF	Rhizobium leguminosarum bv. viciae VF39	1671.03	2.254	4500000000	2.250
+Ne2	Nitrosomonas europaeae ATCC 19718	60.58	0.082	90000000	0.045
+Nu2	Nitrosomonas ureae Nm10	402.68	0.543	90000000	0.045
+Nm2	Nitrosospira multiformis ATCC 25196	155.16	0.209	75000000	0.038
+Nv	Nitrososphaera viennensis	607.41	0.819	11000000000	5.500
