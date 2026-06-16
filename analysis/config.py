@@ -12,7 +12,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 # ---------------------------------------------------------------------------
 
 KLEINER_CONDITIONS = ["P", "U", "C"]
-KLEINER_METHODS = ["Uniques", "Uniform", "Clades", "StudentLFQ"]
+KLEINER_METHODS = ["Uniques", "Uniform", "Clades", "TaxonLFQ"]
 
 KLEINER_COMPOSITION_FILES = {
     "P": "Composition_Of_EQUAL_PROTEIN_AMOUNT_Community.tab",
@@ -36,10 +36,10 @@ KLEINER_METHOD_FILES = {
         "U": "Kleiner_Clades_U.parquet",
         "C": "Kleiner_Clades_C.parquet",
     },
-    "StudentLFQ": {
-        "P": "Kleiner_StudentLFQ_direct_P.parquet",
-        "U": "Kleiner_StudentLFQ_direct_U.parquet",
-        "C": "Kleiner_StudentLFQ_direct_C.parquet",
+    "TaxonLFQ": {
+        "P": "Kleiner_TaxonLFQ_direct_P.parquet",
+        "U": "Kleiner_TaxonLFQ_direct_U.parquet",
+        "C": "Kleiner_TaxonLFQ_direct_C.parquet",
     },
 }
 
@@ -99,14 +99,14 @@ KLEINER_CONTRASTS = {
 # ---------------------------------------------------------------------------
 
 ZHAO_SAMPLES = ["S1", "S2", "S3"]
-ZHAO_METHODS = ["Uniques", "Uniform", "Clades", "StudentLFQ"]
+ZHAO_METHODS = ["Uniques", "Uniform", "Clades", "TaxonLFQ"]
 ZHAO_ORDER = ["Bfr", "Cbu", "Cfr", "Eas", "Eca", "Eco", "Efa", "Kae", "Kpn", "Lac", "Mmo", "Pae"]
 
 ZHAO_METHOD_FILES = {
-    "StudentLFQ": {
-        "S1": "Zhao_StudentLFQ_noLFQ_S1.parquet",
-        "S2": "Zhao_StudentLFQ_noLFQ_S2.parquet",
-        "S3": "Zhao_StudentLFQ_noLFQ_S3.parquet",
+    "TaxonLFQ": {
+        "S1": "Zhao_TaxonLFQ_noLFQ_S1.parquet",
+        "S2": "Zhao_TaxonLFQ_noLFQ_S2.parquet",
+        "S3": "Zhao_TaxonLFQ_noLFQ_S3.parquet",
     },
     "Uniques": {
         "S1": "Zhao_LFQ_uniques_S1.parquet",

@@ -450,7 +450,7 @@ def plot_delta_logfc_sources_markers(
         "Clades": "#d62728",
         "NMF": "#9467bd",
         "St.LFQ": "#09D0EF",
-        "StudentLFQ": "#09D0EF",
+        "TaxonLFQ": "#09D0EF",
     }
 
     present = set().union(*(set(df["organism"].unique()) for df in datasets.values()))

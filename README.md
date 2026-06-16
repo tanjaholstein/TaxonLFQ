@@ -7,7 +7,7 @@ Benchmark comparing methods for allocating shared peptide evidence to taxa in me
 | **Uniques** | Only unique peptides used |
 | **Uniform** | Shared intensity split equally |
 | **Clades** | Distributed by phylogenetic clade |
-| **StudentLFQ** | EM-based allocation with MaxLFQ-style taxon profiles |
+| **TaxonLFQ** | EM-based allocation with MaxLFQ-style taxon profiles |
 
 ## Setup
 
@@ -56,7 +56,7 @@ analysis/
   plots.py          # All plotting functions
   kleiner_analysis.py
   zhao_analysis.py
-src/                # Core StudentLFQ algorithm and shared peptide allocation
+src/                # Core TaxonLFQ algorithm and shared peptide allocation
 ```
 
 ## Input data
@@ -72,7 +72,7 @@ One file per method × dataset × condition. Rows are organisms, columns are run
 | `Kleiner_{method}_{condition}.parquet` | Kleiner 2017 | P (equal protein), U (uneven), C (equal cell number) |
 | `Zhao_{method}_{sample}.parquet` | Zhao 2023 | S1, S2, S3 |
 
-Methods in the filenames: `uniques`, `uniform`, `Clades`, `StudentLFQ_direct` (Kleiner) / `LFQ_uniques`, `uniform`, `LFQ_clades`, `StudentLFQ_noLFQ` (Zhao).
+Methods in the filenames: `uniques`, `uniform`, `Clades`, `TaxonLFQ_direct` (Kleiner) / `LFQ_uniques`, `uniform`, `LFQ_clades`, `TaxonLFQ_noLFQ` (Zhao).
 
 ### `data/recipes/` — ground-truth community compositions (`.tab`)
 
