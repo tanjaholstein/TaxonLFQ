@@ -1,0 +1,21 @@
+# Generated outputs
+analysis/results/
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# IDE / tooling
+.claude/
+.vscode/
