@@ -12,6 +12,8 @@ Benchmark comparing methods for allocating shared peptide evidence to taxa in me
 ## Setup
 
 ```bash
+git clone https://github.com/tanjaholstein/TaxonLFQ.git
+cd TaxonLFQ
 conda env create -f environment.yml
 conda activate taxonlfq
 ```
@@ -57,9 +59,34 @@ analysis/
 src/                # Core StudentLFQ algorithm and shared peptide allocation
 ```
 
-## Data
+## Input data
 
-Pre-computed taxon tables for both datasets are included in `data/taxon_tables/`. These were generated from the original publications' peptide-level data using the methods listed above.
+All data files are included in the repository under `data/`.
+
+### `data/taxon_tables/` — organism × run quantification matrices (`.parquet`)
+
+One file per method × dataset × condition. Rows are organisms, columns are runs. Values are linear intensities.
+
+| File pattern | Dataset | Conditions |
+|---|---|---|
+| `Kleiner_{method}_{condition}.parquet` | Kleiner 2017 | P (equal protein), U (uneven), C (equal cell number) |
+| `Zhao_{method}_{sample}.parquet` | Zhao 2023 | S1, S2, S3 |
+
+Methods in the filenames: `uniques`, `uniform`, `Clades`, `StudentLFQ_direct` (Kleiner) / `LFQ_uniques`, `uniform`, `LFQ_clades`, `StudentLFQ_noLFQ` (Zhao).
+
+### `data/recipes/` — ground-truth community compositions (`.tab`)
+
+Tab-separated files with the known protein and cell abundances for each organism in the Kleiner 2017 mock community. Used as reference for evaluating quantification accuracy.
+
+| File | Community |
+|---|---|
+| `Composition_Of_EQUAL_PROTEIN_AMOUNT_Community.tab` | Condition P |
+| `Composition_Of_UNEVEN_Community.tab` | Condition U |
+| `Composition_Of_EQUAL_CELL_NUMBER_Community.tab` | Condition C |
+
+### `data/peptide_tables/` — peptide-level XIC matrices (`.parquet`)
+
+Per-peptide extracted ion chromatogram intensities for the Kleiner 2017 dataset (conditions P, U, C). These are the upstream input from which the taxon tables were derived.
 
 ## References
 
