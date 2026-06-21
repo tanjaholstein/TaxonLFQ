@@ -1,6 +1,6 @@
 # TaxonLFQ
 
-EM-based taxon quantification for metaproteomics that handles shared peptide evidence. TaxonLFQ allocates XIC intensities across taxa using an expectation-maximisation algorithm followed by MaxLFQ-style profile fitting.
+EM-based taxon quantification for metaproteomics that handles shared peptide evidence. TaxonLFQ allocates XIC intensities across taxa using an expectation-maximisation algorithm living inside a MaxLFQ-style profile fitting.
 
 ---
 
