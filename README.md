@@ -63,7 +63,6 @@ Results are written to the output directory:
 ### Command-line interface
 
 The CLI is the recommended entry point for scripting and workflow integration.
-Progress messages go to **stderr**; the resolved output directory is printed to **stdout**.
 
 **Quick start with the included example data:**
 
@@ -103,12 +102,7 @@ python cli.py \
   --output-dir  results/
 ```
 
-**Capture the output path in a shell pipeline:**
 
-```bash
-OUT=$(python cli.py --intensities peptides.tsv --mapping taxa.tsv --quiet)
-echo "Results in: $OUT"
-```
 
 **All options:**
 
@@ -215,27 +209,7 @@ data/
   recipes/          # Ground-truth community compositions (.tab)
 ```
 
-### Repository structure
 
-```
-cli.py                    # Command-line interface
-app.py                    # Streamlit app
-src/
-  TaxonLFQ.py             # Core EM algorithm: run_taxonlfq(), read_evidence_txt()
-  maxlfq.py               # MaxLFQ solver
-  Aho_Corasick.py         # FASTA → peptide-to-taxon mapping
-  clades.py               # Phylogenetic clade-based allocation
-data/
-  example/                # Toy data for quick-start testing
-  taxon_tables/           # Pre-computed benchmark matrices
-  peptide_tables/         # Per-peptide XIC intensities
-  recipes/                # Ground-truth compositions
-analysis/
-  config.py               # Paths and dataset parameters
-  kleiner_analysis.py     # Kleiner 2017 benchmark driver
-  zhao_analysis.py        # Zhao 2023 benchmark driver
-  plots.py                # Plotting functions
-```
 
 ### References
 
