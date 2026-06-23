@@ -4,11 +4,36 @@ EM-based taxon quantification for metaproteomics that handles shared peptide evi
 
 ---
 
+## Prerequisites
+
+**Conda** — [Miniforge](https://github.com/conda-forge/miniforge) recommended (Miniconda or Anaconda also work)
+
+---
+
 ## Install
+
+First, download the code: click **Code → Download ZIP** on this page, then unzip it. Or, if you use git:
 
 ```bash
 git clone https://github.com/tanjaholstein/TaxonLFQ.git
-cd TaxonLFQ
+```
+
+Then open a terminal in the `TaxonLFQ` folder and run:
+
+### Linux / macOS
+
+```bash
+conda env create -f environment.yml
+conda activate taxonlfq
+```
+
+### Windows
+
+1. Install [Miniforge for Windows](https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe) (or Miniconda/Anaconda).
+2. Open **Miniforge Prompt** (or Anaconda Prompt).
+3. Navigate to the `TaxonLFQ` folder and run:
+
+```bat
 conda env create -f environment.yml
 conda activate taxonlfq
 ```

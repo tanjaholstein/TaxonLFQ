@@ -8,3 +8,9 @@ dependencies:
   - pandas
   - pyarrow
   - jupyter
+  - scipy
+  - numba
+  - streamlit
+  - biopython
+  - pyahocorasick
+  - pip
