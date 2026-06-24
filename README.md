@@ -2,6 +2,8 @@
 
 EM-based taxon quantification for metaproteomics that handles shared peptide evidence. TaxonLFQ allocates XIC intensities across taxa using an expectation-maximisation algorithm living inside a MaxLFQ-style profile fitting.
 
+Available as CLI and as GUI (streamlit app).
+
 ---
 
 ## Prerequisites
