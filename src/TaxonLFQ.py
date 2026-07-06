@@ -1,6 +1,52 @@
+import datetime
+import json
+import re
+import time
+import tracemalloc
+from dataclasses import dataclass
+from itertools import combinations
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from itertools import combinations
+
+from maxlfq import get_protein_ratios, solve_profile
+
+
+@dataclass
+class BenchmarkResult:
+    wall_time_s: float
+    peak_memory_mb: float
+    em_iterations: int
+    T_final: pd.DataFrame
+    diag: pd.DataFrame
+
+
+def _save_run_stats(stats: dict, stats_dir: str | Path) -> Path:
+    """Append a run-stats entry to run_stats/ and return the JSON path.
+
+    Creates two files:
+      <stats_dir>/run_log.tsv          — one TSV row per run (append mode)
+      <stats_dir>/run_<timestamp>.json — full record for this run
+    """
+    out = Path(stats_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    ts = stats["timestamp"]
+    json_path = out / f"run_{ts.replace(':', '').replace('-', '').replace('T', '_')}.json"
+    json_path.write_text(json.dumps(stats, indent=2))
+
+    log_path = out / "run_log.tsv"
+    tsv_cols = ["timestamp", "wall_time_s", "peak_memory_mb", "em_iterations",
+                "n_taxa", "n_samples", "intensities_file", "mapping_file"]
+    write_header = not log_path.exists()
+    with log_path.open("a") as fh:
+        if write_header:
+            fh.write("\t".join(tsv_cols) + "\n")
+        fh.write("\t".join(str(stats.get(c, "")) for c in tsv_cols) + "\n")
+
+    return json_path
+
 
 def lfq_taxon_unique(peptide_run_df, pep2org, exclude=None, min_ratios=2, solver='L-BFGS-B'):
     """
@@ -280,6 +326,16 @@ def taxon_profiles_from_virtual(df_all, pep2taxon_unique, pep2taxa_shared, alpha
     T_new.index.name = 'organism'
     return T_new, diag
 
+def _log_max_change(T_new: pd.DataFrame, T_old: pd.DataFrame) -> float:
+    """Max absolute log-ratio change between two taxon×run matrices (NaN-safe)."""
+    a = np.log(T_new.values.astype(float))
+    b = np.log(T_old.values.astype(float))
+    finite = np.isfinite(a) & np.isfinite(b)
+    if not finite.any():
+        return np.inf
+    return float(np.max(np.abs(a[finite] - b[finite])))
+
+
 def em_taxon_shared_lfq(df_all,
                         TaxonLFQ_Max_uniques,
                         pep2org, pep2orgs,
@@ -290,7 +346,8 @@ def em_taxon_shared_lfq(df_all,
                         beta_shrink=0.0,      # 0..0.5 typically; 0 means no shrink to priors
                         prior_beta=None,      # optional dict {peptide: {taxon: prior_beta}}
                         max_taxa_per_peptide=None,
-                        solver='L-BFGS-B'):
+                        solver='L-BFGS-B',
+                        tol=1e-4):            # convergence: max log-change in T
     """
     EM-style refinement with shared peptides:
       - Initialize T from unique-only LFQ (TaxonLFQ_Max_uniques)
@@ -301,6 +358,7 @@ def em_taxon_shared_lfq(df_all,
       - beta: dict peptide -> dict {taxon: beta_pt}
       - alpha: dict (peptide,taxon) -> np.ndarray α over runs (last iteration)
       - diag: per-taxon diagnostics from last M-step(A)
+      - n_iter: number of EM iterations actually run
     """
     if exclude is None:
         exclude = set()
@@ -311,7 +369,7 @@ def em_taxon_shared_lfq(df_all,
     )
     if len(pep2taxa_shared) == 0:
         print("No shared peptides after filtering; nothing to EM-refine.")
-        return TaxonLFQ_Max_uniques.copy(), {}, {}, pd.DataFrame()
+        return TaxonLFQ_Max_uniques.copy(), {}, {}, pd.DataFrame(), 0
 
     # 1) Initialize T and β
     T = TaxonLFQ_Max_uniques.copy()
@@ -335,7 +393,11 @@ def em_taxon_shared_lfq(df_all,
             beta[p] = {t: 1.0/len(taxa) for t in taxa}
 
     # 2) Iterate
-    for it in range(1, max_iter+1):
+    n_iter = 0
+    diag = pd.DataFrame()
+    for it in range(1, max_iter + 1):
+        T_prev = T.copy()
+
         # E-step: α from β and current T
         alpha = compute_alpha(df_all, T, pep2taxa_shared, beta)
 
@@ -345,8 +407,8 @@ def em_taxon_shared_lfq(df_all,
             min_ratios=min_ratios, solver=solver,
             alpha_floor=alpha_floor, rescale_total=True
         )
-        # Replace T (keep taxa that exist in T_new)
         T = T_new
+        n_iter = it
 
         # M-step(B): update β via robust intercepts with optional shrink to prior
         beta = update_beta(
@@ -354,13 +416,17 @@ def em_taxon_shared_lfq(df_all,
             prior_beta=prior_beta, shrink=beta_shrink
         )
 
-        # (Optional) convergence check on T
-        # We can stop early if max absolute log-change is tiny
-        # Here we keep a fixed number of iterations for simplicity
+        delta = _log_max_change(T, T_prev)
+        print(
+            f"[EM] iteration {it} complete. "
+            f"Taxa with OK profile: {int(diag['ok'].sum())}/{len(diag)}. "
+            f"Max log-change: {delta:.4f}"
+        )
+        if delta < tol:
+            print(f"[EM] Converged after {it} iteration(s).")
+            break
 
-        print(f"[EM] iteration {it} complete. Taxa with OK profile: {int(diag['ok'].sum())}/{len(diag)}")
-
-    return T, beta, alpha, diag
+    return T, beta, alpha, diag, n_iter
 
 import numpy as np
 import pandas as pd
@@ -480,3 +546,338 @@ def reconcile_virtual_to_T(virt_df, T_final, min_total=0.0):
             out.loc[(slice(None), t), :] = out.loc[(slice(None), t), :].mul(gamma.loc[t], axis=1)
 
     return out, gamma
+
+
+# ---------------------------------------------------------------------------
+# Evidence.txt reader and top-level entry point
+# ---------------------------------------------------------------------------
+
+def read_evidence_txt(
+    path,
+    *,
+    seq_col: str = "Sequence",
+    run_col: str = "Raw file",
+    intensity_col: str = "Intensity",
+    filter_contaminants: bool = True,
+    filter_reverse: bool = True,
+    min_pep: float | None = None,
+) -> pd.DataFrame:
+    """Read a MaxQuant evidence.txt file and return a peptide × run intensity matrix.
+
+    Rows are aggregated by (sequence, run) by summing intensities, so multiple
+    charge states and PSMs for the same peptide in the same run are collapsed.
+
+    Parameters
+    ----------
+    path:
+        Path to evidence.txt (tab-separated MaxQuant output).
+    seq_col:
+        Column holding the unmodified peptide sequence (default ``"Sequence"``).
+    run_col:
+        Column identifying the raw file / run (default ``"Raw file"``).
+    intensity_col:
+        Intensity column to use (default ``"Intensity"``; do not use
+        ``"LFQ intensity"`` — that only appears in proteinGroups.txt).
+    filter_contaminants:
+        Drop rows where ``Potential contaminant`` is ``"+"``.
+    filter_reverse:
+        Drop rows where ``Reverse`` is ``"+"``.
+    min_pep:
+        If set, drop rows where ``PEP`` exceeds this threshold.
+
+    Returns
+    -------
+    DataFrame
+        Index = peptide sequence (name ``"peptide"``), columns = run names,
+        values = summed linear intensities (NaN for missing combinations).
+    """
+    ev = pd.read_csv(path, sep="\t", low_memory=False)
+
+    if filter_contaminants and "Potential contaminant" in ev.columns:
+        ev = ev[ev["Potential contaminant"].fillna("") != "+"]
+    if filter_reverse and "Reverse" in ev.columns:
+        ev = ev[ev["Reverse"].fillna("") != "+"]
+    if min_pep is not None and "PEP" in ev.columns:
+        ev = ev[pd.to_numeric(ev["PEP"], errors="coerce") <= min_pep]
+
+    ev[intensity_col] = pd.to_numeric(ev[intensity_col], errors="coerce").replace(0, np.nan)
+
+    agg = (
+        ev.groupby([seq_col, run_col])[intensity_col]
+        .sum(min_count=1)
+        .reset_index()
+    )
+
+    matrix = agg.pivot(index=seq_col, columns=run_col, values=intensity_col)
+    matrix.index.name = "peptide"
+    matrix.columns.name = None
+    return matrix
+
+
+def read_alphapept_peptides(
+    path,
+    *,
+    sequence_col: str = "sequence_naked",
+    run_col: str = "sample_group",
+    intensity_col: str = "ms1_int_sum_area",
+    decoy_col: str = "decoy",
+    filter_decoys: bool = True,
+    max_q_value: float | None = None,
+    q_value_col: str = "q_value",
+    strip_run_extension: bool = True,
+) -> pd.DataFrame:
+    """Read an AlphaPept ``*_peptides.csv`` and return a peptide × run matrix.
+
+    AlphaPept exports one row per scored precursor (charge state × modification
+    form) in ``<results>_peptides.csv``.  This function aggregates to the
+    unmodified stripped-sequence level by summing ``ms1_int_sum_area`` across
+    all precursors sharing the same ``(sequence_naked, sample_group)`` pair,
+    then pivoting to a peptide × run matrix.
+
+    This matches the two-step aggregation described in the TaxonLFQ methods:
+    precursor → modified peptide (collapse charge states), then modified
+    peptide → unmodified sequence (collapse modification forms).  Because
+    AlphaPept's ``sequence_naked`` is already fully stripped, a single
+    ``groupby`` achieves both steps at once.
+
+    Parameters
+    ----------
+    path:
+        Path to AlphaPept ``*_peptides.csv`` (one row per scored precursor).
+        Produced by the AlphaPept workflow with ``lfq_quantification: true``.
+    sequence_col:
+        Column holding the unmodified peptide sequence (default
+        ``"sequence_naked"``).
+    run_col:
+        Column identifying the raw file / run (default ``"sample_group"``).
+        AlphaPept sets this to the filename stem unless ``shortnames`` or
+        ``sample_group`` were explicitly provided in the settings.
+    intensity_col:
+        Intensity column to aggregate (default ``"ms1_int_sum_area"``).
+        Do **not** use any MaxLFQ-normalised column.
+    decoy_col:
+        Column flagging decoy hits (default ``"decoy"``).  Rows where this
+        column equals ``1`` or ``True`` are dropped when *filter_decoys* is
+        ``True``.
+    filter_decoys:
+        Drop decoy hits before aggregation (default ``True``).
+    max_q_value:
+        If set, drop rows where *q_value_col* exceeds this threshold.  Leave
+        as ``None`` when FDR was already applied inside AlphaPept.
+    q_value_col:
+        Column holding per-PSM q-values (default ``"q_value"``).
+    strip_run_extension:
+        Strip file-system path and ``.raw`` / ``.mzML`` extension from run
+        names so labels are clean (default ``True``).
+
+    Returns
+    -------
+    DataFrame
+        Index = peptide sequence (name ``"peptide"``), columns = run names,
+        values = summed linear intensities (NaN for missing combinations).
+    """
+    prec = pd.read_csv(path, low_memory=False)
+
+    if filter_decoys and decoy_col in prec.columns:
+        flag = prec[decoy_col]
+        prec = prec[~flag.isin([1, True, "1", "True", "true"])]
+
+    if max_q_value is not None and q_value_col in prec.columns:
+        prec = prec[pd.to_numeric(prec[q_value_col], errors="coerce") <= max_q_value]
+
+    prec[intensity_col] = pd.to_numeric(prec[intensity_col], errors="coerce").replace(0, np.nan)
+
+    if strip_run_extension and run_col in prec.columns:
+        prec[run_col] = (
+            prec[run_col]
+            .astype(str)
+            .apply(lambda s: re.sub(r"\.(raw|mzML|mzml|RAW)$", "", Path(s).name))
+        )
+
+    agg = (
+        prec.groupby([sequence_col, run_col])[intensity_col]
+        .sum(min_count=1)
+        .reset_index()
+    )
+
+    matrix = agg.pivot(index=sequence_col, columns=run_col, values=intensity_col)
+    matrix.index.name = "peptide"
+    matrix.columns.name = None
+    return matrix
+
+
+def _load_inputs(
+    intensities_file, mapping_file, sep: str = "\t"
+) -> tuple[pd.DataFrame, dict, dict]:
+    """Load intensity matrix and peptide→taxon mappings from files."""
+    df = pd.read_csv(intensities_file, sep=sep, index_col=0).apply(
+        pd.to_numeric, errors="coerce"
+    )
+    df.index.name = "peptide"
+
+    mapping = pd.read_csv(mapping_file, sep=sep)
+    mapping.columns = [c.strip() for c in mapping.columns]
+
+    counts = mapping.groupby("peptide")["taxon"].nunique()
+    unique_peps = set(counts[counts == 1].index)
+    pep2org = (
+        mapping[mapping["peptide"].isin(unique_peps)]
+        .set_index("peptide")["taxon"]
+        .to_dict()
+    )
+    pep2orgs = mapping.groupby("peptide")["taxon"].apply(list).to_dict()
+    return df, pep2org, pep2orgs
+
+
+def _run_core(df, pep2org, pep2orgs, *, exclude, max_iter, min_ratios,
+              alpha_floor, beta_shrink, max_taxa_per_peptide, solver, tol):
+    """Shared compute kernel used by run_taxonlfq and benchmark_taxonlfq."""
+    T_uniques, diag_uniques = lfq_taxon_unique(
+        df, pep2org, exclude=exclude, min_ratios=min_ratios, solver=solver
+    )
+    T_em, _beta, _alpha, diag_em, n_iter = em_taxon_shared_lfq(
+        df, T_uniques, pep2org, pep2orgs,
+        exclude=exclude,
+        max_iter=max_iter,
+        min_ratios=min_ratios,
+        alpha_floor=alpha_floor,
+        beta_shrink=beta_shrink,
+        max_taxa_per_peptide=max_taxa_per_peptide,
+        solver=solver,
+        tol=tol,
+    )
+    if T_em is None or T_em.empty:
+        return T_uniques, diag_uniques, 0
+    return T_em, diag_em, n_iter
+
+
+def run_taxonlfq(
+    intensities_file,
+    mapping_file,
+    *,
+    sep: str = "\t",
+    exclude: set | None = None,
+    max_iter: int = 3,
+    min_ratios: int = 2,
+    alpha_floor: float = 1e-3,
+    beta_shrink: float = 0.0,
+    max_taxa_per_peptide: int | None = None,
+    solver: str = "L-BFGS-B",
+    tol: float = 1e-4,
+    stats_dir: str | Path | None = "run_stats",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run TaxonLFQ end-to-end from pre-pivoted intensity and mapping files.
+
+    Saves wall-time, EM iterations, and result shape to *stats_dir* after every
+    run (pass ``stats_dir=None`` to disable).
+
+    Parameters
+    ----------
+    intensities_file:
+        Path to a tab- (or comma-) separated file where the first column is
+        named ``"peptide"`` and the remaining columns are run/sample names
+        containing linear intensities.  Produce this from a MaxQuant
+        ``evidence.txt`` with :func:`read_evidence_txt`.
+    mapping_file:
+        Path to a tab- (or comma-) separated file with columns ``"peptide"``
+        and ``"taxon"``.  Peptides mapping to a single taxon appear once;
+        shared peptides appear once per taxon.
+    sep:
+        Column separator for both input files (default ``"\\t"``).
+
+    Returns
+    -------
+    T_final : DataFrame
+        Taxon × run linear LFQ intensity matrix.
+    diag : DataFrame
+        Per-taxon diagnostics (n_unique, n_shared, n_pairs, ok).
+    """
+    df, pep2org, pep2orgs = _load_inputs(intensities_file, mapping_file, sep)
+
+    t0 = time.perf_counter()
+    T_out, diag_out, n_iter = _run_core(
+        df, pep2org, pep2orgs,
+        exclude=exclude, max_iter=max_iter, min_ratios=min_ratios,
+        alpha_floor=alpha_floor, beta_shrink=beta_shrink,
+        max_taxa_per_peptide=max_taxa_per_peptide, solver=solver, tol=tol,
+    )
+    wall_time = time.perf_counter() - t0
+
+    if stats_dir is not None:
+        _save_run_stats({
+            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+            "wall_time_s": round(wall_time, 4),
+            "peak_memory_mb": "",
+            "em_iterations": n_iter,
+            "n_taxa": int(T_out.shape[0]),
+            "n_samples": int(T_out.shape[1]),
+            "intensities_file": str(intensities_file),
+            "mapping_file": str(mapping_file),
+        }, stats_dir)
+
+    return T_out, diag_out
+
+
+def benchmark_taxonlfq(
+    intensities_file,
+    mapping_file,
+    *,
+    sep: str = "\t",
+    exclude: set | None = None,
+    max_iter: int = 3,
+    min_ratios: int = 2,
+    alpha_floor: float = 1e-3,
+    beta_shrink: float = 0.0,
+    max_taxa_per_peptide: int | None = None,
+    solver: str = "L-BFGS-B",
+    tol: float = 1e-4,
+    stats_dir: str | Path | None = "run_stats",
+) -> BenchmarkResult:
+    """Run TaxonLFQ and return timing, peak memory, and iteration count.
+
+    Parameters match :func:`run_taxonlfq`.  File I/O is excluded from the
+    timing/memory window so that the benchmark reflects only compute cost.
+    Results are saved to *stats_dir* (pass ``None`` to disable).
+
+    Returns
+    -------
+    BenchmarkResult
+        .wall_time_s    — elapsed wall-clock seconds (compute only, excl. I/O)
+        .peak_memory_mb — peak Python heap allocation in MB (via tracemalloc)
+        .em_iterations  — actual EM iterations run (≤ max_iter if converged)
+        .T_final        — taxon × run LFQ matrix
+        .diag           — per-taxon diagnostics DataFrame
+    """
+    df, pep2org, pep2orgs = _load_inputs(intensities_file, mapping_file, sep)
+
+    tracemalloc.start()
+    t0 = time.perf_counter()
+    T_out, diag_out, n_iter = _run_core(
+        df, pep2org, pep2orgs,
+        exclude=exclude, max_iter=max_iter, min_ratios=min_ratios,
+        alpha_floor=alpha_floor, beta_shrink=beta_shrink,
+        max_taxa_per_peptide=max_taxa_per_peptide, solver=solver, tol=tol,
+    )
+    wall_time = time.perf_counter() - t0
+    _, peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    if stats_dir is not None:
+        _save_run_stats({
+            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+            "wall_time_s": round(wall_time, 4),
+            "peak_memory_mb": round(peak_bytes / 1024 ** 2, 3),
+            "em_iterations": n_iter,
+            "n_taxa": int(T_out.shape[0]),
+            "n_samples": int(T_out.shape[1]),
+            "intensities_file": str(intensities_file),
+            "mapping_file": str(mapping_file),
+        }, stats_dir)
+
+    return BenchmarkResult(
+        wall_time_s=wall_time,
+        peak_memory_mb=peak_bytes / 1024 ** 2,
+        em_iterations=n_iter,
+        T_final=T_out,
+        diag=diag_out,
+    )
