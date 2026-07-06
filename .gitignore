@@ -1,5 +1,9 @@
+# Binaries / large tools
+.bin/
+
 # Generated outputs
 analysis/results/
+data/results/
 *.pdf
 
 # Python

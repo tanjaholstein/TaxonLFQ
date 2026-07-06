@@ -88,6 +88,30 @@ KLEINER_ORDER = [
     "259", "137", "BS", "HB2",
 ]
 
+KLEINER_TAXON_NAMES = {
+    "NV":    "N. viennensis",
+    "841":   "R. leguminosarum 3841",
+    "VF":    "R. leguminosarum VF39",
+    "ATN":   "A. tumefaciens NTL4",
+    "AK199": "Roseobacter AK199",
+    "PaD":   "Pa. denitrificans",
+    "Am2":   "A. macleodii",
+    "K12":   "E. coli K12",
+    "LT2":   "S. typhimurium LT2",
+    "KF7":   "P. pseudoalcaligenes",
+    "PD":    "Ps. denitrificans",
+    "Pfl":   "P. fluorescens",
+    "SMS":   "S. maltophilia",
+    "BXL":   "B. xenovorans",
+    "Cup":   "C. metallidurans",
+    "CV":    "C. violaceum",
+    "CRH":   "C. reinhardtii",
+    "259":   "S. aureus 25923",
+    "137":   "S. aureus 13709",
+    "BS":    "B. subtilis 168",
+    "HB2":   "T. thermophilus HB27",
+}
+
 KLEINER_CONTRASTS = {
     "P_vs_U": {"numerator": "P", "denominator": "U", "title": "P vs. U", "obs_label": r"P$_{\mathrm{obs}}$"},
     "P_vs_C": {"numerator": "P", "denominator": "C", "title": "P vs. C", "obs_label": r"P$_{\mathrm{obs}}$"},

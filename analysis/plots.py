@@ -47,6 +47,7 @@ def plot_bar_chart(
     ax=None,
     show=True,
     tight=True,
+    show_metrics=True,
 ):
     if dash_props is None:
         dash_props = dict(color="0.7", linewidth=1, linestyle="--")
@@ -108,6 +109,7 @@ def plot_bar_chart(
         ax.set_xticks(x)
         ax.set_xticklabels(organisms)
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_ylabel("Relative abundance")
 
     if fs_title is not None:
         ax.set_title(title, fontsize=fs_title)
@@ -159,11 +161,12 @@ def plot_bar_chart(
         ha = metrics_ha or "right"
         va = metrics_va or "top"
 
-    bbox_kw = dict(facecolor="white", edgecolor="0.8", alpha=0.85, boxstyle="round,pad=0.25")
-    if metrics_box_kw:
-        bbox_kw.update(metrics_box_kw)
-    ax.text(xy[0], xy[1], txt, transform=transform, ha=ha, va=va,
-            bbox=bbox_kw, fontsize=fs_metrics)
+    if show_metrics:
+        bbox_kw = dict(facecolor="white", edgecolor="0.8", alpha=0.85, boxstyle="round,pad=0.25")
+        if metrics_box_kw:
+            bbox_kw.update(metrics_box_kw)
+        ax.text(xy[0], xy[1], txt, transform=transform, ha=ha, va=va,
+                bbox=bbox_kw, fontsize=fs_metrics)
 
     ax.set_ylim(0.0, ymax_tick)
     ax.yaxis.set_major_locator(MultipleLocator(ytick_step))
@@ -608,3 +611,164 @@ def plot_delta_logfc_sources_markers(
     if show:
         plt.show()
     return fig, ax, stats_df
+
+
+_METHOD_COLORS = {
+    "Uniques": "#ff7f0e",
+    "Uniform": "#2ca02c",
+    "Clades": "#d62728",
+    "TaxonLFQ": "#09D0EF",
+}
+
+
+def plot_fc_obs_vs_true(
+    fc_by_method: dict,
+    title: str,
+    *,
+    colors: dict | None = None,
+    figsize=(5, 5),
+    dpi=300,
+    fs_title=12,
+    fs_ticks=9,
+    fs_legend=8,
+    show: bool = True,
+):
+    palette = colors or _METHOD_COLORS
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    all_vals = []
+    for r in fc_by_method.values():
+        all_vals.extend(r["logFC_true"].dropna().tolist())
+        all_vals.extend(r["logFC_hat"].dropna().tolist())
+    lim = max(abs(v) for v in all_vals if np.isfinite(v)) * 1.1
+
+    ax.plot([-lim, lim], [-lim, lim], color="0.7", lw=1, ls="--", zorder=1)
+    ax.axhline(0, color="0.9", lw=0.5)
+    ax.axvline(0, color="0.9", lw=0.5)
+
+    for j, (method, r) in enumerate(fc_by_method.items()):
+        true = r["logFC_true"].dropna()
+        obs = r["logFC_hat"].reindex(true.index).dropna()
+        true = true.reindex(obs.index)
+        ax.scatter(true, obs, c=palette.get(method, f"C{j}"),
+                   s=35, zorder=3, label=method, alpha=0.85, edgecolors="none")
+
+    ax.set_xlim(-lim, lim)
+    ax.set_ylim(-lim, lim)
+    ax.set_xlabel("True log2 FC", fontsize=fs_ticks)
+    ax.set_ylabel("Observed log2 FC", fontsize=fs_ticks)
+    ax.set_title(title, fontsize=fs_title)
+    ax.legend(fontsize=fs_legend, framealpha=0.8)
+    ax.set_aspect("equal")
+    ax.tick_params(labelsize=fs_ticks)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+    return fig, ax
+
+
+def plot_fc_bars_per_organism(
+    logFC_hat: pd.Series,
+    logFC_true: pd.Series,
+    title: str,
+    *,
+    desired_order: list,
+    bar_color: str = "#5799C7",
+    figsize=(6, 3),
+    dpi=300,
+    fs_title=12,
+    fs_ticks=6,
+    show: bool = True,
+):
+    x = np.arange(len(desired_order))
+    obs_vals = logFC_hat.reindex(desired_order).to_numpy()
+    true_vals = logFC_true.reindex(desired_order).to_numpy()
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    ax.axhline(0, color="0.8", lw=0.8)
+    ax.bar(x, obs_vals, color=bar_color)
+    ax.scatter(x, true_vals, color="0.3", s=8, zorder=3, marker="D")
+    ax.set_xticks(x)
+    ax.set_xticklabels(desired_order, rotation=45, ha="right", fontsize=fs_ticks)
+    ax.set_ylabel("log2 fold change", fontsize=fs_ticks)
+    ax.set_title(title, fontsize=fs_title)
+    ax.tick_params(axis="y", labelsize=fs_ticks)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+    return fig, ax
+
+
+def plot_fc_error_grouped(
+    fc_by_method: dict,
+    title: str,
+    *,
+    desired_order: list,
+    colors: dict | None = None,
+    figsize=(10, 3.5),
+    dpi=300,
+    fs_title=12,
+    fs_ticks=7,
+    show: bool = True,
+):
+    palette = colors or _METHOD_COLORS
+    methods = list(fc_by_method.keys())
+    n = len(methods)
+    x = np.arange(len(desired_order))
+    width = 0.8 / n
+    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    ax.axhline(0, color="0.4", lw=1, ls="--", zorder=1)
+
+    for j, method in enumerate(methods):
+        err = fc_by_method[method]["err"].reindex(desired_order)
+        ax.bar(x + offsets[j], err.to_numpy(), width=width * 0.92,
+               color=palette.get(method, f"C{j}"), label=method, alpha=0.85, zorder=2)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(desired_order, rotation=45, ha="right", fontsize=fs_ticks)
+    ax.set_ylabel("log2 FC error (obs − true)", fontsize=fs_ticks)
+    ax.set_title(title, fontsize=fs_title)
+    ax.legend(fontsize=fs_ticks, framealpha=0.8)
+    ax.tick_params(axis="y", labelsize=fs_ticks)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+    return fig, ax
+
+
+def plot_fc_heatmap(
+    fc_by_method: dict,
+    title: str,
+    *,
+    desired_order: list,
+    vmax: float = 3.0,
+    figsize=(4, 7),
+    dpi=300,
+    fs_title=12,
+    fs_ticks=8,
+    show: bool = True,
+):
+    methods = list(fc_by_method.keys())
+    data = np.full((len(desired_order), len(methods)), np.nan)
+    for j, method in enumerate(methods):
+        data[:, j] = fc_by_method[method]["err"].reindex(desired_order).to_numpy()
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    im = ax.imshow(data, aspect="auto", cmap="RdBu_r", vmin=-vmax, vmax=vmax)
+    plt.colorbar(im, ax=ax, label="log2 FC error (obs − true)", shrink=0.6)
+
+    ax.set_xticks(range(len(methods)))
+    ax.set_xticklabels(methods, fontsize=fs_ticks, rotation=30, ha="right")
+    ax.set_yticks(range(len(desired_order)))
+    ax.set_yticklabels(desired_order, fontsize=fs_ticks)
+    ax.set_title(title, fontsize=fs_title)
+
+    plt.tight_layout()
+    if show:
+        plt.show()
+    return fig, ax
