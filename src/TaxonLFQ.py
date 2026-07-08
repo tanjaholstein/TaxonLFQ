@@ -3,6 +3,7 @@ import json
 import re
 import time
 import tracemalloc
+import warnings
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
@@ -100,8 +101,14 @@ def lfq_taxon_unique(peptide_run_df, pep2org, exclude=None, min_ratios=2, solver
         n_pairs = int(np.isfinite(ratios).sum())
         # Solve for the taxon profile
         I_hat, ok = solve_profile(ratios, solver)
+        if not ok and np.isfinite(I_hat).any():
+            warnings.warn(
+                f"solve_profile did not converge for taxon {tax!r} (success=False); "
+                "using best solution found.",
+                stacklevel=2,
+            )
 
-        if ok and np.isfinite(I_hat).any():
+        if np.isfinite(I_hat).any():
             # Optional rescaling to preserve the taxon’s total observed peptide signal
             scale_per_run = sub.sum(axis=0).values  # linear units
             total_scale = np.nansum(scale_per_run)
@@ -310,8 +317,14 @@ def taxon_profiles_from_virtual(df_all, pep2taxon_unique, pep2taxa_shared, alpha
         ratios = get_protein_ratios(sub.values, run_pairs, min_ratios)
         n_pairs = int(np.isfinite(ratios).sum())
         I_hat, ok = solve_profile(ratios, solver)
+        if not ok and np.isfinite(I_hat).any():
+            warnings.warn(
+                f"solve_profile did not converge for taxon {t!r} (success=False); "
+                "using best solution found.",
+                stacklevel=2,
+            )
 
-        if ok and np.isfinite(I_hat).any():
+        if np.isfinite(I_hat).any():
             if rescale_total:
                 total_obs = np.nansum(sub.values)  # taxon’s observed peptide signal (virtual + unique)
                 sum_hat = np.nansum(I_hat)
