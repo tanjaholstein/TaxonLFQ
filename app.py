@@ -184,7 +184,11 @@ if run_btn and int_file and mapping_ready:
                 observed = list(pd.read_csv(int_path, sep=sep, index_col=0).index)
 
             with st.spinner("Mapping peptides to taxa via FASTA…"):
-                org2seqs = fasta_by_prefix(str(fasta_path))
+                try:
+                    org2seqs = fasta_by_prefix(str(fasta_path))
+                except ValueError as exc:
+                    st.error(str(exc))
+                    st.stop()
                 raw_mapping = map_peptides_ac(observed, org2seqs)
 
             rows = [

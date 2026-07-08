@@ -4,24 +4,74 @@
 from Bio import SeqIO
 import ahocorasick
 from collections import defaultdict
-import re, pathlib, pprint
+import re, pathlib, pprint, warnings
 
 # ------------------------------------------------------------------
-# 1 · FASTA  →  {prefix : [protein strings]}
+# 1 · FASTA  →  {taxon label : [protein strings]}
+#
+# Taxon labels are extracted via a cascade of recognised header formats:
+#   P1  UniProt OX=  —  OX=9606          (NCBI taxonomy integer)
+#   P2  UniProt OS=  —  OS=Homo sapiens   (organism name string)
+#   P3  NCBI/RefSeq  —  [Homo sapiens]    (bracket at end of header)
+#   P4  custom DB    —  TaxonPrefix_…     (prefix before first '_')
+# If no header in the file matches any pattern a ValueError is raised.
 # ------------------------------------------------------------------
-HEADER_RE = re.compile(r'^([^_]+)_')          # >Pfl_…  →  "Pfl"
+_OX_RE     = re.compile(r'\bOX=(\d+)')
+_OS_RE     = re.compile(r'\bOS=(.+?)(?=\s+[A-Z]{2}=|\s*$)')
+_NCBI_RE   = re.compile(r'\[(.+?)\]\s*$')
+_PREFIX_RE = re.compile(r'^([^_]+)_')
+
+
+def _extract_taxon_label(description: str):
+    """Return the taxon label from a FASTA description line, or None."""
+    m = _OX_RE.search(description)
+    if m:
+        return m.group(1)
+    m = _OS_RE.search(description)
+    if m:
+        return m.group(1).strip()
+    m = _NCBI_RE.search(description)
+    if m:
+        return m.group(1).strip()
+    first_word = description.split()[0] if description.strip() else ""
+    m = _PREFIX_RE.match(first_word)
+    if m:
+        return m.group(1)
+    return None
+
 
 def fasta_by_prefix(fasta_path, ignore_numeric=False):
     org2seqs = defaultdict(list)
+    n_total = 0
+    n_unmatched = 0
 
     for rec in SeqIO.parse(fasta_path, "fasta"):
-        m = HEADER_RE.match(rec.id)
-        if not m:
+        n_total += 1
+        label = _extract_taxon_label(rec.description)
+        if label is None:
+            n_unmatched += 1
             continue
-        prefix = m.group(1)
-        if ignore_numeric and prefix.isdigit():
+        if ignore_numeric and label.isdigit():
             continue
-        org2seqs[prefix].append(str(rec.seq))
+        org2seqs[label].append(str(rec.seq))
+
+    if not org2seqs:
+        raise ValueError(
+            f"Could not infer taxon labels from any of the {n_total} FASTA headers. "
+            "None of the supported formats were recognised:\n"
+            "  • UniProt:    OX=<taxID>  or  OS=<organism name>\n"
+            "  • NCBI/RefSeq: [Organism name] at end of header\n"
+            "  • Custom DB:  <TaxonPrefix>_<ProteinID>\n\n"
+            "Please provide your own peptide→taxon mapping file instead of a FASTA."
+        )
+
+    if n_unmatched > 0:
+        warnings.warn(
+            f"{n_unmatched}/{n_total} FASTA records had no recognisable taxon pattern "
+            "and were skipped. If this is unexpected, provide your own "
+            "peptide→taxon mapping file instead of a FASTA.",
+            stacklevel=2,
+        )
 
     return dict(org2seqs)
 
