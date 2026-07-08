@@ -24,11 +24,11 @@ with st.sidebar:
 
     input_format = st.radio(
         "Intensity input format",
-        ["MaxQuant evidence.txt", "AlphaPept precursors.csv", "Pre-pivoted TSV/CSV"],
+        ["MaxQuant evidence.txt", "AlphaPept peptides.csv", "Pre-pivoted TSV/CSV"],
         horizontal=False,
     )
     use_evidence = input_format == "MaxQuant evidence.txt"
-    use_alphapept = input_format == "AlphaPept precursors.csv"
+    use_alphapept = input_format == "AlphaPept peptides.csv"
 
     if use_evidence:
         int_file = st.file_uploader(
