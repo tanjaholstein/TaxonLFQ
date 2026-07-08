@@ -4,6 +4,7 @@
 # Generated outputs
 analysis/results/
 data/results/
+data/actual_data/
 *.pdf
 
 # Python

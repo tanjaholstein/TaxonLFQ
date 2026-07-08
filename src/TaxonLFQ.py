@@ -687,6 +687,9 @@ def read_alphapept_peptides(
 
     prec[intensity_col] = pd.to_numeric(prec[intensity_col], errors="coerce").replace(0, np.nan)
 
+    if run_col in prec.columns:
+        prec = prec.dropna(subset=[run_col])
+
     if strip_run_extension and run_col in prec.columns:
         prec[run_col] = (
             prec[run_col]
