@@ -340,7 +340,14 @@ def taxon_profiles_from_virtual(df_all, pep2taxon_unique, pep2taxa_shared, alpha
     return T_new, diag
 
 def _log_max_change(T_new: pd.DataFrame, T_old: pd.DataFrame) -> float:
-    """Max absolute log-ratio change between two taxon×run matrices (NaN-safe)."""
+    """Max absolute log-ratio change between two taxon×run matrices (NaN-safe).
+
+    Aligns on the common taxon index before comparing.  If the taxon set
+    changed (taxa appeared or disappeared) the iteration is not converged,
+    so return inf rather than crashing on a shape mismatch.
+    """
+    if not T_new.index.equals(T_old.index):
+        return np.inf
     a = np.log(T_new.values.astype(float))
     b = np.log(T_old.values.astype(float))
     finite = np.isfinite(a) & np.isfinite(b)
